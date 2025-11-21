@@ -1,0 +1,5 @@
+{
+  "name": "Target Repurposing Hypothesizer",
+  "description": "A GNN-based platform for predicting novel drug-target interactions to accelerate R&D.",
+  "requestFramePermissions": []
+}
