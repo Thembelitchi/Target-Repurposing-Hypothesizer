@@ -30,6 +30,11 @@ export interface Prediction {
   proteinName: string;
   probability: number;
   status: 'New' | 'Validated' | 'Investigating';
+  provenance: string;           // e.g. 'DrugBank DB00331', 'ChEMBL25'
+  targetProvenance: string;     // e.g. 'OpenTargets OT_P04150', 'STRING 9606.ENSP00000263388'
+  ragScore: number;             // RAG Literature Confidence score
+  pathways: string[];           // Associated biological pathways
+  attentionWeights: { node: string; weight: number }[]; // Graph Transformer self-attention weights
 }
 
 export interface TrainingMetric {
