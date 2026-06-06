@@ -49,4 +49,5 @@ export enum AppView {
   TRAINING = 'TRAINING',
   PREDICTIONS = 'PREDICTIONS',
   DATA_UPLOAD = 'DATA_UPLOAD',
+  ABOUT = 'ABOUT',
 }

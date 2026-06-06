@@ -23,6 +23,7 @@ import {
 
 interface GraphVisualizerProps {
   data: GraphData;
+  edgeThreshold?: number;
 }
 
 interface NodeMetadata {
@@ -527,7 +528,7 @@ const getLinkMetadata = (link: GraphLink, sourceNode: GraphNode, targetNode: Gra
   };
 };
 
-const GraphVisualizer: React.FC<GraphVisualizerProps> = ({ data }) => {
+const GraphVisualizer: React.FC<GraphVisualizerProps> = ({ data, edgeThreshold: propEdgeThreshold }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<any>(null);
@@ -542,7 +543,8 @@ const GraphVisualizer: React.FC<GraphVisualizerProps> = ({ data }) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showAutocomplete, setShowAutocomplete] = useState<boolean>(false);
   const [isZoomEnabled, setIsZoomEnabled] = useState<boolean>(true);
-  const [edgeThreshold, setEdgeThreshold] = useState<number>(0.0);
+  const [localEdgeThreshold, setLocalEdgeThreshold] = useState<number>(0.0);
+  const edgeThreshold = propEdgeThreshold !== undefined ? propEdgeThreshold : localEdgeThreshold;
 
   // Programmatic zoom handlers
   const handleZoomIn = () => {
@@ -1070,22 +1072,7 @@ const GraphVisualizer: React.FC<GraphVisualizerProps> = ({ data }) => {
           </div>
         </div>
 
-        {/* Legend Overlay bottom left */}
-        <div className="absolute bottom-3 left-3 z-10 bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-800 text-3xs text-slate-400 font-mono space-y-1.5 shadow-lg select-none">
-          <span className="text-4xs uppercase tracking-wider text-slate-500 font-bold block pb-1 border-b border-slate-850">Topology Map Index</span>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 border border-blue-900 shadow"></span>
-            <span>Chemical Ligands (Compounds)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-600 border border-red-900 shadow"></span>
-            <span>Target Receptors (Proteins)</span>
-          </div>
-          <div className="pt-1 text-4xs text-slate-500 leading-normal flex items-center gap-1 border-t border-slate-850">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
-            <span>Hover isolates connected subnet</span>
-          </div>
-        </div>
+
 
         {/* Main Canvas SVG */}
         <svg 
@@ -1097,10 +1084,11 @@ const GraphVisualizer: React.FC<GraphVisualizerProps> = ({ data }) => {
       </div>
 
       {/* RIGHT COMPONENT: Interactive Entity Property Sheet */}
-      <div 
-        className="w-full md:w-[280px] xl:w-[325px] flex flex-col bg-slate-900 border border-slate-800 rounded-xl p-4 shrink-0 overflow-y-auto"
-      >
-        {selectedNode ? (
+      {(selectedNode || selectedLink) && (
+        <div 
+          className="w-full md:w-[280px] xl:w-[325px] flex flex-col bg-slate-900 border border-slate-800 rounded-xl p-4 shrink-0 overflow-y-auto"
+        >
+          {selectedNode ? (
           /* DISPLAY NODE DETAILS */
           <div className="space-y-4 flex flex-col h-full">
             <div className="flex justify-between items-start pb-2.5 border-b border-slate-800">
@@ -1318,7 +1306,7 @@ const GraphVisualizer: React.FC<GraphVisualizerProps> = ({ data }) => {
               )}
             </div>
           </div>
-        ) : selectedLink ? (
+        ) : (
           /* DISPLAY CLICKED LINK DETAILS */
           <div className="space-y-4 flex flex-col h-full">
             <div className="flex justify-between items-start pb-2.5 border-b border-slate-800">
@@ -1405,70 +1393,9 @@ const GraphVisualizer: React.FC<GraphVisualizerProps> = ({ data }) => {
               </button>
             </div>
           </div>
-        ) : (
-          /* NO SELECTION / SHOW GENERAL GRAPH OVERVIEW METRICS */
-          <div className="flex flex-col justify-between h-full space-y-4">
-            <div className="space-y-3.5">
-              <div className="flex items-center gap-2 pb-2.5 border-b border-slate-800">
-                <span className="p-1.5 bg-slate-950 text-indigo-400 border border-slate-850 rounded-lg">
-                  <Compass size={14} className="animate-spin-slow" />
-                </span>
-                <div>
-                  <h3 className="font-bold text-xs text-slate-200 uppercase tracking-widest font-mono">Entity Inspector</h3>
-                  <p className="text-4xs text-slate-500 font-mono">Heterogeneous physical graph properties</p>
-                </div>
-              </div>
-
-              <p className="text-slate-400 text-3xs leading-relaxed">
-                Click on any node (Ligand, Receptor) or physical association link on the interactive topological grid map to inspect high-fidelity biological properties, disease mappings, chemical formulas, and validation evidence scores.
-              </p>
-
-              {/* Sub-network analytics stats cards */}
-              <div className="space-y-2 mt-4 font-mono text-3xs">
-                <span className="text-4xs uppercase text-slate-500 font-bold tracking-widest block font-bold leading-none">Net Centrality Aggregates</span>
-                
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center bg-slate-950/40 p-1.5 rounded border border-slate-850/60 text-slate-400">
-                    <span className="flex items-center gap-1"><Database size={10} /> Active Node Total:</span>
-                    <strong className="text-blue-400">{data.nodes.length} entities</strong>
-                  </div>
-                  <div className="flex justify-between items-center bg-slate-950/40 p-1.5 rounded border border-slate-850/60 text-slate-400">
-                    <span className="flex items-center gap-1"><LinkIcon size={10} /> Physical Relations:</span>
-                    <strong className="text-indigo-400">{data.links.length} lines</strong>
-                  </div>
-                  <div className="flex justify-between items-center bg-slate-950/40 p-1.5 rounded border border-slate-850/60 text-slate-400 font-mono">
-                    <span className="flex items-center gap-1"><Activity size={10} /> Graph Density:</span>
-                    <strong className="text-slate-200">
-                      {(data.nodes.length > 1 ? (data.links.length / (data.nodes.length * (data.nodes.length - 1) / 2)).toFixed(3) : 0)}
-                    </strong>
-                  </div>
-                  <div className="flex justify-between items-center bg-slate-950/40 p-1.5 rounded border border-slate-850/60 text-slate-400">
-                    <span className="flex items-center gap-1"><HelpCircle size={10} /> Network Class:</span>
-                    <strong className="text-indigo-400 font-bold uppercase text-4xs">Multi-Relational</strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Dynamic Interactive Quick Tips */}
-              <div className="p-2.5 bg-indigo-950/20 border border-indigo-950 text-indigo-300 rounded-lg text-3xs space-y-1 flex gap-1.5 items-start">
-                <Sparkles size={12} className="text-indigo-400 shrink-0 mt-0.5" />
-                <div className="space-y-0.5 leading-tight">
-                  <span className="font-bold text-3xs tracking-wider block uppercase font-mono">GNN Centrality Tip</span>
-                  <span className="text-slate-400 text-4xs leading-normal font-sans block">
-                    Metformin, Aspirin, and Atorvastatin show high target association degrees. Isolating neighbors uncovers critical cascade pipelines.
-                  </span>
-                </div>
-              </div>
-
-            </div>
-
-            <div className="pt-2 border-t border-slate-850 p-1 bg-slate-950/30 rounded border border-slate-850/40">
-              <span className="text-4xs font-mono text-slate-500 block text-center uppercase">Consolidated R&D discovery panel</span>
-            </div>
-          </div>
         )}
-
       </div>
+      )}
 
     </div>
   );
