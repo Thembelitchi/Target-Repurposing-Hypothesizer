@@ -29,9 +29,13 @@ const PredictionTable: React.FC<PredictionTableProps> = ({ predictions, onViewGr
     setLoadingExplanation(true);
     setExplanation("");
     try {
+      const customKey = localStorage.getItem("user_gemini_api_key") || "";
       const response = await fetch("/api/explain", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-gemini-key": customKey
+        },
         body: JSON.stringify({
           compound: pred.compoundName,
           protein: pred.proteinName,

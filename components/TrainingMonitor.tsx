@@ -32,9 +32,13 @@ const TrainingMonitor: React.FC<TrainingMonitorProps> = ({ data }) => {
     if (explanation) return;
     setLoadingExplanation(true);
     try {
+      const customKey = localStorage.getItem("user_gemini_api_key") || "";
       const response = await fetch("/api/explain-training", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-gemini-key": customKey
+        },
       });
       const resData = await response.json();
       if (response.ok) {

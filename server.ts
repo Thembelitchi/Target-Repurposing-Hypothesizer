@@ -13,11 +13,12 @@ async function startServer() {
   app.post("/api/explain", async (req, res) => {
     try {
       const { compound, protein, ragScore, provenance, targetProvenance, pathways } = req.body;
-      const apiKey = process.env.GEMINI_API_KEY;
+      const customKey = req.headers["x-gemini-key"] as string | undefined;
+      const apiKey = customKey || process.env.GEMINI_API_KEY;
 
       if (!apiKey) {
         return res.status(500).json({ 
-          error: "GEMINI_API_KEY is not configured on the server. Please add your key in Settings > Secrets."
+          error: "GEMINI_API_KEY is not configured on the server. Please enter your custom key in the Settings dialog (click 'Set API Key' on the top right) or add it to your server's environment variables."
         });
       }
 
@@ -71,11 +72,12 @@ async function startServer() {
   // API Route: AI explanation of training optimization findings
   app.post("/api/explain-training", async (req, res) => {
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
+      const customKey = req.headers["x-gemini-key"] as string | undefined;
+      const apiKey = customKey || process.env.GEMINI_API_KEY;
 
       if (!apiKey) {
         return res.status(500).json({ 
-          error: "GEMINI_API_KEY is not configured on the server. Please add your key in Settings > Secrets."
+          error: "GEMINI_API_KEY is not configured on the server. Please enter your custom key in the Settings dialog (click 'Set API Key' on the top right) or add it to your server's environment variables."
         });
       }
 

@@ -4,6 +4,8 @@ import GraphVisualizer from './components/GraphVisualizer';
 import TrainingMonitor from './components/TrainingMonitor';
 import PredictionTable from './components/PredictionTable';
 import DataUpload from './components/DataUpload';
+import ProbabilityHistogram from './components/ProbabilityHistogram';
+import ApplicationDemo from './components/ApplicationDemo';
 import { INITIAL_GRAPH_DATA, PREDICTIONS_DATA, TRAINING_METRICS } from './services/mockData';
 import { 
   LayoutDashboard, 
@@ -36,6 +38,22 @@ const App: React.FC = () => {
   const [isCustomData, setIsCustomData] = useState(false);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isMLOpsDropdownOpen, setIsMLOpsDropdownOpen] = useState(false);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('user_gemini_api_key') || '');
+  const [apiKeyInput, setApiKeyInput] = useState(apiKey);
+
+  const handleSaveApiKey = (key: string) => {
+    localStorage.setItem('user_gemini_api_key', key.trim());
+    setApiKey(key.trim());
+    setIsApiKeyModalOpen(false);
+  };
+
+  const handleClearApiKey = () => {
+    localStorage.removeItem('user_gemini_api_key');
+    setApiKey('');
+    setApiKeyInput('');
+    setIsApiKeyModalOpen(false);
+  };
 
   // Global search filters
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
@@ -61,6 +79,7 @@ const App: React.FC = () => {
       if (e.key === 'Escape') {
         setIsGraphModalOpen(false);
         setIsMLOpsDropdownOpen(false);
+        setIsApiKeyModalOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -84,11 +103,24 @@ const App: React.FC = () => {
     });
   }, [predictions, globalSearchQuery, globalThreshold]);
 
+  const handleApplyPreset = (compound: string, targetName: string, threshold: number) => {
+    setGlobalSearchQuery(compound);
+    setGlobalThreshold(threshold);
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case AppView.DASHBOARD:
         return (
           <div className="flex flex-col gap-6 h-full overflow-y-auto pr-1 pb-16" id="dashboard-view-panel">
+            {/* Interactive Flow Simulator Demo Widget */}
+            <div id="dashboard-interactive-demo-card">
+              <ApplicationDemo 
+                onApplyPreset={handleApplyPreset}
+                onNavigateView={(view) => setCurrentView(view)}
+              />
+            </div>
+
             {/* Main Single-Column Hero: Hypotheses Table holds 100% immediate focal attention */}
             <div className="bg-slate-900 border border-slate-850 rounded-xl p-5 shadow-xl" id="hero-predictions-card">
               <PredictionTable 
@@ -97,10 +129,17 @@ const App: React.FC = () => {
               />
             </div>
 
-            {/* Bottom Row: Compression of Telemetry updates */}
-            <div className="space-y-3" id="optimization-telemetry-container">
-              <span className="text-4xs uppercase tracking-widest font-bold text-slate-500 font-mono block">Integrated Deep Learning Pipeline</span>
-              <TrainingMonitor data={TRAINING_METRICS} />
+            {/* Bottom Row: Responsive grid with Optimizer and probability histogram */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="dashboard-bottom-grid">
+              <div className="lg:col-span-7 space-y-3" id="optimization-telemetry-container">
+                <span className="text-4xs uppercase tracking-widest font-bold text-slate-500 font-mono block">Integrated Deep Learning Pipeline</span>
+                <TrainingMonitor data={TRAINING_METRICS} />
+              </div>
+
+              <div className="lg:col-span-5 space-y-3" id="probability-distribution-container">
+                <span className="text-4xs uppercase tracking-widest font-bold text-slate-500 font-mono block">Model Calibration Metrics</span>
+                <ProbabilityHistogram predictions={filteredPredictions} />
+              </div>
             </div>
           </div>
         );
@@ -329,7 +368,22 @@ const App: React.FC = () => {
               </div>
 
               {/* Mobile Status Toggler & Profile Box (hidden on desktop) */}
-              <div className="flex md:hidden items-center gap-2 relative">
+              <div className="flex md:hidden items-center gap-1.5 relative">
+                <button
+                  onClick={() => {
+                    setApiKeyInput(apiKey);
+                    setIsApiKeyModalOpen(true);
+                  }}
+                  className={`flex items-center gap-1 border px-2 py-1 rounded-lg text-5xs font-mono font-bold uppercase transition-all cursor-pointer ${
+                    apiKey ? 'bg-emerald-950/40 border-emerald-900/60 text-emerald-400' : 'bg-slate-950 border-slate-850 text-slate-400'
+                  }`}
+                  title="Configure Gemini API key"
+                  id="btn-trigger-api-key-modal-mobile"
+                >
+                  <Lock size={9} className={apiKey ? "text-emerald-400" : "text-amber-500"} />
+                  <span>Key</span>
+                </button>
+
                 <button
                   onClick={() => setIsMLOpsDropdownOpen(!isMLOpsDropdownOpen)}
                   className={`flex items-center gap-1 bg-slate-950 border px-2.5 py-1.5 rounded-lg text-5xs font-mono font-bold uppercase transition-all cursor-pointer ${
@@ -502,16 +556,46 @@ const App: React.FC = () => {
                 )}
               </div>
 
+              {/* API Key settings trigger */}
+              <button
+                onClick={() => {
+                  setApiKeyInput(apiKey);
+                  setIsApiKeyModalOpen(true);
+                }}
+                className={`flex items-center gap-1.5 text-3xs font-mono font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                  apiKey 
+                    ? 'bg-emerald-950/40 border-emerald-900/60 text-emerald-400 hover:bg-emerald-900/10' 
+                    : 'bg-slate-950 hover:bg-slate-900 border-slate-850 text-slate-400 hover:text-slate-205'
+                }`}
+                title="Configure custom Gemini API key for dynamic research summaries"
+                id="btn-trigger-api-key-modal"
+              >
+                <Lock size={12} className={apiKey ? "text-emerald-400" : "text-amber-500"} />
+                <span>{apiKey ? "API Key: Set" : "Configure API Key"}</span>
+              </button>
+
               {/* Developer credentials avatar indicator */}
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-bold text-white border border-indigo-450 font-mono" title="Validated Pharma Account Profile: JD">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-bold text-white border border-indigo-455 font-mono" title="Validated Pharma Account Profile: JD">
                 JD
               </div>
             </div>
         </header>
         
         {/* Inner page layout canvas */}
-        <div className="flex-1 p-6 overflow-hidden">
-          {renderContent()}
+        <div className="flex-1 p-6 overflow-hidden flex flex-col">
+          <div className="flex-1 min-h-0">
+            {renderContent()}
+          </div>
+          
+          {/* Platform Attribution Footer */}
+          <footer className="mt-4 pt-3 border-t border-slate-850/40 flex items-center justify-between text-[10px] text-slate-500 font-mono tracking-wider uppercase shrink-0">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Secure Subnet Connection
+            </span>
+            <span className="font-semibold text-slate-400">Created by Thembelihle Gumede</span>
+            <span className="hidden sm:inline">System Cluster v4.1-BioGPT</span>
+          </footer>
         </div>
       </main>
 
@@ -549,6 +633,87 @@ const App: React.FC = () => {
             {/* Modal Graph Visualizer Space */}
             <div className="flex-1 min-h-0 relative mt-4">
               <GraphVisualizer data={graphData} edgeThreshold={globalThreshold} />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* 4. Custom Client-Side Gemini API Key Management Modal */}
+      {isApiKeyModalOpen && (
+        <>
+          <div 
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 transition-opacity cursor-pointer duration-200"
+            onClick={() => setIsApiKeyModalOpen(false)}
+            id="api-key-modal-backdrop"
+          />
+          <div className="fixed inset-x-4 bottom-4 md:bottom-auto md:top-1/4 md:left-1/2 md:-translate-x-1/2 md:max-w-md bg-slate-950 border border-slate-850 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col p-6 animate-in zoom-in-95 duration-200" id="api-key-modal-dialog">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center pb-3.5 border-b border-slate-850">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 bg-indigo-950 text-indigo-450 border border-indigo-900 rounded-lg">
+                  <Lock size={15} />
+                </span>
+                <div>
+                  <h2 className="text-xs font-bold text-slate-100 uppercase tracking-widest font-mono">
+                    API Key Configuration
+                  </h2>
+                  <p className="text-5xs text-slate-500 font-mono mt-0.5">Configure your browser's secure reasoning agent parameters.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsApiKeyModalOpen(false)}
+                className="p-1 px-2 text-slate-500 hover:text-slate-205 font-mono text-4xs uppercase cursor-pointer transition-colors"
+                id="btn-close-api-key-modal"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="space-y-4 my-4 font-sans text-xs">
+              <div className="bg-indigo-950/25 border border-indigo-950 p-3 rounded-lg text-4xs font-mono text-indigo-300 leading-normal">
+                👋 <strong>Security First:</strong> Your custom Gemini API key is stored <strong>exclusively</strong> in your secure browser cache (using localStorage). It is never permanently stored on our databases, recorded in any cloud workspace, or shared on GitHub. It simply authorizes dynamic analysis requests over a lightweight header connection.
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-5xs text-slate-450 font-bold uppercase tracking-widest block font-mono">
+                  Custom Gemini API Key
+                </label>
+                <input
+                  type="password"
+                  placeholder="Paste your Gemini key here (e.g. AIzaSy...)"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-550 focus:outline-none rounded-xl px-3 py-2 text-2xs font-mono text-slate-200 placeholder-slate-600 transition-colors"
+                  id="api-key-input-field"
+                />
+              </div>
+
+              {!apiKey && (
+                <p className="text-[10px] text-amber-500/90 leading-tight italic font-mono flex gap-1 items-start">
+                  <span>⚠️</span>
+                  <span>Currently defaulting to fallback environment variables if configured in model settings.</span>
+                </p>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex gap-2.5 pt-3 border-t border-slate-850 shrink-0 font-mono">
+              <button
+                onClick={handleClearApiKey}
+                disabled={!apiKey}
+                className="px-3 py-2 border border-slate-850 bg-slate-950 hover:bg-slate-900 text-slate-500 hover:text-rose-450 disabled:opacity-40 disabled:hover:text-slate-500 text-4xs uppercase font-bold rounded-lg cursor-pointer transition-colors flex items-center gap-1 shrink-0"
+              >
+                Purge Key
+              </button>
+
+              <button
+                onClick={() => handleSaveApiKey(apiKeyInput)}
+                className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-505 text-white text-4xs uppercase font-bold rounded-lg cursor-pointer transition-colors text-center"
+                id="btn-save-api-key"
+              >
+                Authorize key
+              </button>
             </div>
           </div>
         </>
